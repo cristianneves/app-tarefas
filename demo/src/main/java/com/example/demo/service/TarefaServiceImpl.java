@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.CategoriaResponseDTO;
+import com.example.demo.dto.DashboardDTO;
 import com.example.demo.dto.TarefaRequestDTO;
 import com.example.demo.dto.TarefaResponseDTO;
 import com.example.demo.exception.AcessoNegadoException;
@@ -12,9 +13,11 @@ import com.example.demo.model.Tarefa;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.CategoriaRepository;
 import com.example.demo.repository.TarefaRepository;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -177,6 +180,33 @@ public class TarefaServiceImpl implements TarefaService {
                 tarefa.getDataDeCriacao(),
                 tarefa.getDataDeVencimento(),
                 subTarefasDTO
+        );
+    }
+
+    public DashboardDTO gerarDashboard(Usuario usuario) {
+        LocalDateTime agora = LocalDateTime.now();
+
+        long totalTarefas = this.tarefaRepository.countByUsuario(usuario);
+        long tarefasPendentes = this.tarefaRepository.countByUsuarioAndStatus(usuario, "PENDENTE");
+        long tarefasConcluidas = this.tarefaRepository.countByUsuarioAndStatus(usuario, "CONCLUIDA");
+        long tarefasAtrasadas = this.tarefaRepository.countTarefasAtrasadas(usuario, agora);
+
+        Optional<Tarefa> proximaTarefaOpt = this.tarefaRepository.findProximaTarefaAVencer(usuario, agora);
+
+        DashboardDTO.TarefaResumidaDTO proximaTarefaDTO = proximaTarefaOpt
+                .map(tarefa -> new DashboardDTO.TarefaResumidaDTO(
+                        tarefa.getId(),
+                        tarefa.getTitulo(),
+                        tarefa.getDataDeVencimento()
+                ))
+                .orElse(null);
+
+        return new DashboardDTO(
+                totalTarefas,
+                tarefasPendentes,
+                tarefasConcluidas,
+                tarefasAtrasadas,
+                proximaTarefaDTO
         );
     }
 }

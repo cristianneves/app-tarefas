@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.DashboardDTO;
 import com.example.demo.dto.TarefaRequestDTO;
 import com.example.demo.dto.TarefaResponseDTO;
 import com.example.demo.model.Prioridade;
@@ -32,6 +33,13 @@ public class TarefaController {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
         List<TarefaResponseDTO> tarefas = this.tarefaService.listarTarefas(usuarioLogado,prioridade,categoriaId);
         return ResponseEntity.ok(tarefas);
+    }
+
+    @GetMapping("/dashboard")
+    public ResponseEntity<DashboardDTO> verDashboard(Authentication authentication){
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        DashboardDTO dashboard = this.tarefaService.gerarDashboard(usuarioLogado);
+        return ResponseEntity.ok(dashboard);
     }
 
     @PostMapping
