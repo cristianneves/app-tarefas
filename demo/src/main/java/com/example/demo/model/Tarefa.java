@@ -49,6 +49,9 @@ public class Tarefa {
     @JsonManagedReference
     private Set<Tarefa> subTarefas = new HashSet<>();
 
+    @OneToMany(mappedBy = "tarefa", cascade = CascadeType.ALL)
+    private Set<Anexo> anexos = new HashSet<>();
+
     @PrePersist
     public void definirDataDeCriacao(){
         this.dataDeCriacao = LocalDateTime.now();

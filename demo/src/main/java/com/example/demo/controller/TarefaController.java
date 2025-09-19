@@ -1,16 +1,19 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.AnexoResponseDTO;
 import com.example.demo.dto.DashboardDTO;
 import com.example.demo.dto.TarefaRequestDTO;
 import com.example.demo.dto.TarefaResponseDTO;
 import com.example.demo.model.Prioridade;
 import com.example.demo.model.Usuario;
+import com.example.demo.service.AnexoService;
 import com.example.demo.service.TarefaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,9 +23,11 @@ import java.util.UUID;
 public class TarefaController {
 
     private final TarefaService tarefaService;
+    private final AnexoService anexoService;
 
-    public TarefaController(TarefaService tarefaService) {
+    public TarefaController(TarefaService tarefaService, AnexoService anexoService) {
         this.tarefaService = tarefaService;
+        this.anexoService = anexoService;
     }
 
 
@@ -48,6 +53,17 @@ public class TarefaController {
         TarefaResponseDTO tarefaSalva = tarefaService.criarTarefa(tarefaDTO, usuarioLogado);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(tarefaSalva);
+    }
+
+    @PostMapping("/{idDaTarefa}/anexos")
+    public ResponseEntity<?> uploadAnexo(
+            @PathVariable UUID idDaTarefa,
+            @RequestParam("arquivo") MultipartFile arquivo,
+            Authentication authentication
+    ) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        AnexoResponseDTO anexoSalvo = anexoService.anexarArquivo(arquivo, idDaTarefa, usuarioLogado);
+        return ResponseEntity.status(HttpStatus.CREATED).body(anexoSalvo);
     }
 
     @PutMapping("/{id}")
