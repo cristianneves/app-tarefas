@@ -44,11 +44,12 @@ public class AuthenticationController {
 
         String senhaCriptografada = this.passwordEncoder.encode(registroDTO.senha());
 
-        Usuario usuario = new Usuario();
-        usuario.setLogin(registroDTO.login());
-        usuario.setSenha(senhaCriptografada);
+        Usuario novoUsuario = new Usuario();
+        novoUsuario.setLogin(registroDTO.login());
+        novoUsuario.setSenha(senhaCriptografada);
+        novoUsuario.setEmail(registroDTO.email());
 
-        this.usuarioRepository.save(usuario);
+        this.usuarioRepository.save(novoUsuario);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 

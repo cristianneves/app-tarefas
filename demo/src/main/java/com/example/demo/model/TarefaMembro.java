@@ -22,9 +22,9 @@ public class TarefaMembro {
 
     @ManyToOne
     @JoinColumn(name = "usuario_id",  nullable = false)
-    private Usuario usuario;
+    private Usuario membro;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String permissao;
+    private Permissao permissao;
 }

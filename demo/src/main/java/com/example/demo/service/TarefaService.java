@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.ConvidarMembroRequestDTO;
 import com.example.demo.dto.DashboardDTO;
 import com.example.demo.dto.TarefaRequestDTO;
 import com.example.demo.dto.TarefaResponseDTO;
@@ -16,4 +17,6 @@ public interface TarefaService {
     void deletarTarefa(UUID ID, Usuario usuario);
 
     DashboardDTO gerarDashboard(Usuario usuarioLogado);
+
+    void convidarMembro(UUID tarefaId, ConvidarMembroRequestDTO conviteDTO, Usuario donoDaTarefa);
 }

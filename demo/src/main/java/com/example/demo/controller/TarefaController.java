@@ -1,9 +1,6 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.AnexoResponseDTO;
-import com.example.demo.dto.DashboardDTO;
-import com.example.demo.dto.TarefaRequestDTO;
-import com.example.demo.dto.TarefaResponseDTO;
+import com.example.demo.dto.*;
 import com.example.demo.model.Prioridade;
 import com.example.demo.model.Usuario;
 import com.example.demo.service.AnexoService;
@@ -12,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -78,6 +76,18 @@ public class TarefaController {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
         tarefaService.deletarTarefa(id,usuarioLogado);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{tarefaId}/membros")
+    @Transactional
+    public ResponseEntity<Void> convidarMembro(
+            @PathVariable UUID tarefaId,
+            @RequestBody @Valid ConvidarMembroRequestDTO conviteDTO,
+            Authentication authentication
+    ) {
+        Usuario donoDaTarefa = (Usuario) authentication.getPrincipal();
+        this.tarefaService.convidarMembro(tarefaId, conviteDTO, donoDaTarefa);
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
 }
