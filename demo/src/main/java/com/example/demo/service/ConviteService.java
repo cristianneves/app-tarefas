@@ -11,4 +11,7 @@ public interface ConviteService {
     void convidarMembro(UUID tarefaId, ConvidarMembroRequestDTO conviteDTO, Usuario donoDaTarefa);
 
     List<ConviteResponseDTO> listarConvitesPendentes(Usuario usuarioLogado);
+
+    void aceitarConvite(UUID conviteId, Usuario usuarioLogado);
+    void recusarConvite(UUID conviteId, Usuario usuarioLogado);
 }
