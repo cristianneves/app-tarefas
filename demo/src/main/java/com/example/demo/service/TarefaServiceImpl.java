@@ -71,13 +71,25 @@ public class TarefaServiceImpl implements TarefaService {
     }
 
     @Override
+    @Transactional
     public TarefaResponseDTO atualizarTarefa(UUID id, TarefaRequestDTO tarefaDTO, Usuario usuario) {
         Tarefa tarefaExistente = this.tarefaRepository.findById(id).orElseThrow(() ->
                 new TarefaNaoEncontradaException("Tarefa não encontrada com o ID: " + id)
         );
 
-        if (!tarefaExistente.getUsuario().getId().equals(usuario.getId())) {
-            throw new AcessoNegadoException("Acesso negado: esta tarefa não pertence ao usuário.");
+        // 1. Verifica se o usuário logado é o dono da tarefa.
+        boolean ehDono = tarefaExistente.getUsuario().getId().equals(usuario.getId());
+
+        // 2. Se não for o dono, verifica se é um membro com permissão de editar.
+        boolean podeEditar = tarefaExistente.getMembros().stream()
+                .anyMatch(membro ->
+                        membro.getMembro().getId().equals(usuario.getId()) &&
+                                membro.getPermissao() == Permissao.EDITAR
+                );
+
+        // 3. Se não for nem o dono, nem um colaborador com permissão de edição, lança o erro.
+        if (!ehDono && !podeEditar) {
+            throw new AcessoNegadoException("Acesso negado: você não tem permissão para editar esta tarefa.");
         }
 
         Categoria categoriaDaTarefa = null;
