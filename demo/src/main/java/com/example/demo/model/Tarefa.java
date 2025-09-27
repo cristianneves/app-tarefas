@@ -29,7 +29,8 @@ public class Tarefa {
     @Size(max = 255, message = "A descrição não pode exceder 255 caracteres.")
     private String descricao;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private StatusTarefa status;
 
     private LocalDateTime dataDeCriacao;
 

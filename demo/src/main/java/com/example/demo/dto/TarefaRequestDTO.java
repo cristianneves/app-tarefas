@@ -1,6 +1,7 @@
 package com.example.demo.dto;
 
 import com.example.demo.model.Prioridade;
+import com.example.demo.model.StatusTarefa;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -11,7 +12,6 @@ public record TarefaRequestDTO(@NotBlank String titulo,
                                UUID categoriaId,
                                Prioridade prioridade,
                                @Size String descricao,
-                               String status,
                                LocalDateTime dataDeVencimento,
                                UUID tarefaPaiId) {
 }

@@ -18,5 +18,8 @@ public interface TarefaService {
 
     DashboardDTO gerarDashboard(Usuario usuarioLogado);
 
+    void iniciarTarefa(UUID tarefaId, Usuario usuarioLogado);
+    void concluirTarefa(UUID tarefaId, Usuario usuarioLogado);
+
 
 }
