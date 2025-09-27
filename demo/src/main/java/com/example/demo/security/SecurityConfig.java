@@ -1,3 +1,4 @@
+// Em SecurityConfig.java
 package com.example.demo.security;
 
 import org.springframework.context.annotation.Bean;
@@ -31,8 +32,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/registrar").permitAll()
-                        .requestMatchers("/tarefas/**").authenticated()
-                        .requestMatchers("/categoria/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)

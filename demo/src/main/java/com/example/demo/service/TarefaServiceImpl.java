@@ -1,46 +1,53 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.CategoriaResponseDTO;
-import com.example.demo.dto.TarefaRequestDTO;
-import com.example.demo.dto.TarefaResponseDTO;
-import com.example.demo.exception.AcessoNegadoException;
-import com.example.demo.exception.CategoriaNaoEncontradaException;
-import com.example.demo.exception.TarefaNaoEncontradaException;
-import com.example.demo.model.Categoria;
-import com.example.demo.model.Prioridade;
-import com.example.demo.model.Tarefa;
-import com.example.demo.model.Usuario;
+import com.example.demo.dto.*;
+import com.example.demo.exception.*;
+import com.example.demo.model.*;
 import com.example.demo.repository.CategoriaRepository;
+import com.example.demo.repository.TarefaMembroRepository;
 import com.example.demo.repository.TarefaRepository;
+import com.example.demo.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
-import static java.util.stream.Collectors.toList;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
 
 @Service
 public class TarefaServiceImpl implements TarefaService {
 
     private final TarefaRepository tarefaRepository;
     private final CategoriaRepository categoriaRepository;
+    private final TarefaMembroRepository  tarefaMembroRepository;
+    private final UsuarioRepository usuarioRepository;
 
-    public TarefaServiceImpl(TarefaRepository tarefaRepository, CategoriaRepository categoriaRepository) {
+    public TarefaServiceImpl(TarefaRepository tarefaRepository, CategoriaRepository categoriaRepository, TarefaMembroRepository tarefaMembroRepository, UsuarioRepository usuarioRepository) {
         this.tarefaRepository = tarefaRepository;
         this.categoriaRepository = categoriaRepository;
+        this.tarefaMembroRepository = tarefaMembroRepository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @Override
+    @Transactional
     public TarefaResponseDTO criarTarefa(TarefaRequestDTO tarefaDTO, Usuario usuario) {
-
         Categoria categoriaDaTarefa = null;
-
         if (tarefaDTO.categoriaId() != null) {
             categoriaDaTarefa = this.categoriaRepository.findById(tarefaDTO.categoriaId())
-                    .orElseThrow(() -> new CategoriaNaoEncontradaException("Categoria informada nao existe"));
-
+                    .orElseThrow(() -> new CategoriaNaoEncontradaException("Categoria informada não existe."));
             if (!categoriaDaTarefa.getUsuario().getId().equals(usuario.getId())) {
                 throw new AcessoNegadoException("Acesso negado: a categoria selecionada não pertence ao usuário.");
+            }
+        }
+
+        Tarefa tarefaPai = null;
+        if (tarefaDTO.tarefaPaiId() != null) {
+            tarefaPai = this.tarefaRepository.findById(tarefaDTO.tarefaPaiId())
+                    .orElseThrow(() -> new TarefaNaoEncontradaException("A tarefa pai informada não existe."));
+            if (!tarefaPai.getUsuario().getId().equals(usuario.getId())) {
+                throw new AcessoNegadoException("Acesso negado: a tarefa pai selecionada não pertence ao usuário.");
             }
         }
 
@@ -49,33 +56,17 @@ public class TarefaServiceImpl implements TarefaService {
         novaTarefa.setDescricao(tarefaDTO.descricao());
         novaTarefa.setStatus(tarefaDTO.status());
         novaTarefa.setPrioridade(tarefaDTO.prioridade());
-        novaTarefa.setUsuario(usuario);
         novaTarefa.setDataDeVencimento(tarefaDTO.dataDeVencimento());
+        novaTarefa.setUsuario(usuario);
         novaTarefa.setCategoria(categoriaDaTarefa);
+        novaTarefa.setTarefaPai(tarefaPai);
 
-        Tarefa tarefaSalva = this.tarefaRepository.save(novaTarefa);
-
-        CategoriaResponseDTO categoriaResponse = null;
-
-        if (tarefaSalva.getCategoria() != null) {
-            categoriaResponse = new CategoriaResponseDTO(
-                    tarefaSalva.getCategoria().getId(),
-                    tarefaSalva.getCategoria().getNome(),
-                    tarefaSalva.getCategoria().getDescricao(),
-                    tarefaSalva.getCategoria().getUsuario().getId()
-            );
+        if (tarefaPai != null) {
+            tarefaPai.getSubTarefas().add(novaTarefa);
         }
 
-        return new TarefaResponseDTO(
-                tarefaSalva.getId(),
-                tarefaSalva.getTitulo(),
-                categoriaResponse,
-                tarefaSalva.getPrioridade(),
-                tarefaSalva.getDescricao(),
-                tarefaSalva.getStatus(),
-                tarefaSalva.getDataDeCriacao(),
-                tarefaSalva.getDataDeVencimento()
-        );
+        Tarefa tarefaSalva = this.tarefaRepository.save(novaTarefa);
+        return toTarefaResponseDTO(tarefaSalva);
     }
 
     @Override
@@ -107,70 +98,34 @@ public class TarefaServiceImpl implements TarefaService {
 
         Tarefa tarefaSalva = this.tarefaRepository.save(tarefaExistente);
 
-        CategoriaResponseDTO categoriaResponse = null;
-        if (tarefaSalva.getCategoria() != null) {
-            categoriaResponse = new CategoriaResponseDTO(
-                    tarefaSalva.getCategoria().getId(),
-                    tarefaSalva.getCategoria().getNome(),
-                    tarefaSalva.getCategoria().getDescricao(),
-                    tarefaSalva.getCategoria().getUsuario().getId()
-            );
-        }
-
-        return new TarefaResponseDTO(
-                tarefaSalva.getId(),
-                tarefaSalva.getTitulo(),
-                categoriaResponse,
-                tarefaSalva.getPrioridade(),
-                tarefaSalva.getDescricao(),
-                tarefaSalva.getStatus(),
-                tarefaSalva.getDataDeCriacao(),
-                tarefaSalva.getDataDeVencimento()
-        );
+        return toTarefaResponseDTO(tarefaSalva);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<TarefaResponseDTO> listarTarefas(Usuario usuario, Prioridade prioridade, UUID categoriaId) {
-
         List<Tarefa> tarefas;
-
         if (categoriaId != null) {
             Categoria categoria = this.categoriaRepository.findById(categoriaId)
                     .orElseThrow(() -> new CategoriaNaoEncontradaException("Categoria informada não existe."));
-
             tarefas = this.tarefaRepository.findByUsuarioAndCategoria(usuario, categoria);
-
         } else if (prioridade != null) {
             tarefas = this.tarefaRepository.findByUsuarioAndPrioridade(usuario, prioridade);
-
         } else {
             tarefas = this.tarefaRepository.findByUsuario(usuario);
-            tarefas.sort(Comparator.comparing(t -> t.getPrioridade().getValor()));
         }
 
-        return tarefas.stream().map(tarefa -> {
+        List<Tarefa> tarefasPrincipais = tarefas.stream()
+                .filter(tarefa -> tarefa.getTarefaPai() == null)
+                .collect(Collectors.toCollection(ArrayList::new));
 
-            CategoriaResponseDTO categoriaResponse = null;
-            if (tarefa.getCategoria() != null) {
-                categoriaResponse = new CategoriaResponseDTO(
-                        tarefa.getCategoria().getId(),
-                        tarefa.getCategoria().getNome(),
-                        tarefa.getCategoria().getDescricao(),
-                        tarefa.getCategoria().getUsuario().getId()
-                );
-            }
+        if (categoriaId == null && prioridade == null) {
+            tarefasPrincipais.sort(Comparator.comparing(t -> t.getPrioridade().getValor()));
+        }
 
-            return new TarefaResponseDTO(
-                    tarefa.getId(),
-                    tarefa.getTitulo(),
-                    categoriaResponse,
-                    tarefa.getPrioridade(),
-                    tarefa.getDescricao(),
-                    tarefa.getStatus(),
-                    tarefa.getDataDeCriacao(),
-                    tarefa.getDataDeVencimento()
-            );
-        }).toList();
+        return tarefasPrincipais.stream()
+                .map(this::toTarefaResponseDTO)
+                .toList();
     }
 
     @Override
@@ -184,5 +139,70 @@ public class TarefaServiceImpl implements TarefaService {
         }
 
         this.tarefaRepository.deleteById(id);
+    }
+
+    private TarefaResponseDTO toTarefaResponseDTO(Tarefa tarefa) {
+        if (tarefa == null) {
+            return null;
+        }
+
+        CategoriaResponseDTO categoriaResponse = null;
+        if (tarefa.getCategoria() != null) {
+            categoriaResponse = new CategoriaResponseDTO(
+                    tarefa.getCategoria().getId(),
+                    tarefa.getCategoria().getNome(),
+                    tarefa.getCategoria().getDescricao(),
+                    tarefa.getCategoria().getUsuario().getId()
+            );
+        }
+
+        Set<TarefaResponseDTO> subTarefasDTO = new HashSet<>();
+        // A verificação explícita e a cópia para uma nova lista previnem o erro
+        if (tarefa.getSubTarefas() != null && !tarefa.getSubTarefas().isEmpty()) {
+            // Criamos uma cópia da coleção ANTES de iterar sobre ela com o stream
+            Set<Tarefa> copiaSubTarefas = new HashSet<>(tarefa.getSubTarefas());
+            subTarefasDTO = copiaSubTarefas.stream()
+                    .map(this::toTarefaResponseDTO)
+                    .collect(Collectors.toSet());
+        }
+
+        return new TarefaResponseDTO(
+                tarefa.getId(),
+                tarefa.getTitulo(),
+                categoriaResponse,
+                tarefa.getPrioridade(),
+                tarefa.getDescricao(),
+                tarefa.getStatus(),
+                tarefa.getDataDeCriacao(),
+                tarefa.getDataDeVencimento(),
+                subTarefasDTO
+        );
+    }
+
+    public DashboardDTO gerarDashboard(Usuario usuario) {
+        LocalDateTime agora = LocalDateTime.now();
+
+        long totalTarefas = this.tarefaRepository.countByUsuario(usuario);
+        long tarefasPendentes = this.tarefaRepository.countByUsuarioAndStatus(usuario, "PENDENTE");
+        long tarefasConcluidas = this.tarefaRepository.countByUsuarioAndStatus(usuario, "CONCLUIDA");
+        long tarefasAtrasadas = this.tarefaRepository.countTarefasAtrasadas(usuario, agora);
+
+        Optional<Tarefa> proximaTarefaOpt = this.tarefaRepository.findProximaTarefaAVencer(usuario, agora);
+
+        DashboardDTO.TarefaResumidaDTO proximaTarefaDTO = proximaTarefaOpt
+                .map(tarefa -> new DashboardDTO.TarefaResumidaDTO(
+                        tarefa.getId(),
+                        tarefa.getTitulo(),
+                        tarefa.getDataDeVencimento()
+                ))
+                .orElse(null);
+
+        return new DashboardDTO(
+                totalTarefas,
+                tarefasPendentes,
+                tarefasConcluidas,
+                tarefasAtrasadas,
+                proximaTarefaDTO
+        );
     }
 }

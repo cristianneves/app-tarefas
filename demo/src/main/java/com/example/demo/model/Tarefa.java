@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -13,20 +13,29 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(exclude = {"tarefaPai", "subTarefas"})
+@ToString(exclude = {"tarefaPai", "subTarefas"})
 public class Tarefa {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
+
     @NotBlank(message = "O título é obrigatório.")
     private String titulo;
+
     @Size(max = 255, message = "A descrição não pode exceder 255 caracteres.")
     private String descricao;
+
     private String status;
+
     private LocalDateTime dataDeCriacao;
+
     @Enumerated(EnumType.STRING)
     private Prioridade prioridade;
+
     private LocalDateTime dataDeVencimento;
 
     @ManyToOne
@@ -45,6 +54,12 @@ public class Tarefa {
     @OneToMany(mappedBy = "tarefaPai", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private Set<Tarefa> subTarefas = new HashSet<>();
+
+    @OneToMany(mappedBy = "tarefa", cascade = CascadeType.ALL)
+    private Set<Anexo> anexos = new HashSet<>();
+
+    @OneToMany(mappedBy = "tarefa", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TarefaMembro> membros = new HashSet<>();
 
     @PrePersist
     public void definirDataDeCriacao(){

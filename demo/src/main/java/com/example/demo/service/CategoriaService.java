@@ -2,8 +2,6 @@ package com.example.demo.service;
 
 import com.example.demo.dto.CategoriaRequestDTO;
 import com.example.demo.dto.CategoriaResponseDTO;
-import com.example.demo.dto.TarefaRequestDTO;
-import com.example.demo.dto.TarefaResponseDTO;
 import com.example.demo.model.Usuario;
 
 import java.util.List;
