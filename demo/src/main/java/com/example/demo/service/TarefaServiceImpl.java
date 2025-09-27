@@ -146,6 +146,7 @@ public class TarefaServiceImpl implements TarefaService {
     }
 
     @Override
+    @Transactional
     public void deletarTarefa(UUID id,Usuario usuario) {
         Tarefa tarefaEscolhida = this.tarefaRepository.findById(id).orElseThrow(() ->
                 new TarefaNaoEncontradaException("Tarefa nao encontrada com o ID:" + id)
@@ -196,15 +197,17 @@ public class TarefaServiceImpl implements TarefaService {
         );
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public DashboardDTO gerarDashboard(Usuario usuario) {
         LocalDateTime agora = LocalDateTime.now();
 
-        long totalTarefas = this.tarefaRepository.countByUsuario(usuario);
-        long tarefasPendentes = this.tarefaRepository.countByUsuarioAndStatus(usuario, "PENDENTE");
-        long tarefasConcluidas = this.tarefaRepository.countByUsuarioAndStatus(usuario, "CONCLUIDA");
-        long tarefasAtrasadas = this.tarefaRepository.countTarefasAtrasadas(usuario, agora);
+        long totalTarefas = this.tarefaRepository.countTotalTarefasByUsuarioOrMembro(usuario);
+        long tarefasPendentes = this.tarefaRepository.countTarefasByStatusForUsuarioOrMembro(usuario, "PENDENTE");
+        long tarefasConcluidas = this.tarefaRepository.countTarefasByStatusForUsuarioOrMembro(usuario, "CONCLUIDA");
+        long tarefasAtrasadas = this.tarefaRepository.countTarefasAtrasadasForUsuarioOrMembro(usuario, agora);
 
-        Optional<Tarefa> proximaTarefaOpt = this.tarefaRepository.findProximaTarefaAVencer(usuario, agora);
+        Optional<Tarefa> proximaTarefaOpt = this.tarefaRepository.findProximaTarefaAVencerForUsuarioOrMembro(usuario, agora);
 
         DashboardDTO.TarefaResumidaDTO proximaTarefaDTO = proximaTarefaOpt
                 .map(tarefa -> new DashboardDTO.TarefaResumidaDTO(

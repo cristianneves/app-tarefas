@@ -8,6 +8,7 @@ import com.example.demo.model.Categoria;
 import com.example.demo.model.Usuario;
 import com.example.demo.repository.CategoriaRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -23,6 +24,7 @@ public class CategoriaServiceImpl implements CategoriaService {
     }
 
     @Override
+    @Transactional
     public CategoriaResponseDTO criarCategoria(CategoriaRequestDTO categoriaDTO, Usuario usuario){
 
         Categoria novaCategoria = new Categoria();
@@ -42,6 +44,7 @@ public class CategoriaServiceImpl implements CategoriaService {
     }
 
     @Override
+    @Transactional
     public CategoriaResponseDTO atualizarCategoria(UUID ID, CategoriaRequestDTO categoriaDTO, Usuario usuario) {
         Categoria categoriaEscolhida = this.categoriaRepository.findById(ID).orElseThrow(() ->
                 new CategoriaNaoEncontradaException("Categoria nao encontrada.")
@@ -65,6 +68,7 @@ public class CategoriaServiceImpl implements CategoriaService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CategoriaResponseDTO> listarCategorias(Usuario usuario) {
         List<Categoria> categorias = this.categoriaRepository.findByUsuario(usuario);
 
@@ -79,6 +83,7 @@ public class CategoriaServiceImpl implements CategoriaService {
     }
 
     @Override
+    @Transactional
     public void deletarCategoria(UUID id, Usuario usuario) {
         Categoria categoriaEscolhida = this.categoriaRepository.findById(id).orElseThrow(() ->
                 new CategoriaNaoEncontradaException("Categoria nao encontrada.")
