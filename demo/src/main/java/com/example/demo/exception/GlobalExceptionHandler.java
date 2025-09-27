@@ -17,7 +17,8 @@ public class GlobalExceptionHandler {
             TarefaNaoEncontradaException.class,
             CategoriaNaoEncontradaException.class,
             UsuarioNaoEncontradoException.class,
-            AnexoNaoEncontradoException.class
+            AnexoNaoEncontradoException.class,
+            ConviteNaoEncontradoException.class,
     })
     public ResponseEntity<String> handleResourceNotFoundException(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());

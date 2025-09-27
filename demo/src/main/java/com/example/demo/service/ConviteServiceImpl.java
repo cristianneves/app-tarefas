@@ -2,15 +2,10 @@ package com.example.demo.service;
 
 import com.example.demo.dto.ConvidarMembroRequestDTO;
 import com.example.demo.dto.ConviteResponseDTO;
-import com.example.demo.exception.AcessoNegadoException;
-import com.example.demo.exception.RegraDeNegocioException;
-import com.example.demo.exception.TarefaNaoEncontradaException;
-import com.example.demo.exception.UsuarioNaoEncontradoException;
-import com.example.demo.model.Convite;
-import com.example.demo.model.StatusConvite;
-import com.example.demo.model.Tarefa;
-import com.example.demo.model.Usuario;
+import com.example.demo.exception.*;
+import com.example.demo.model.*;
 import com.example.demo.repository.ConviteRepository;
+import com.example.demo.repository.TarefaMembroRepository;
 import com.example.demo.repository.TarefaRepository;
 import com.example.demo.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
@@ -25,11 +20,13 @@ public class ConviteServiceImpl implements ConviteService {
     private final TarefaRepository tarefaRepository;
     private final UsuarioRepository usuarioRepository;
     private final ConviteRepository conviteRepository;
+    private final TarefaMembroRepository tarefaMembroRepository;
 
-    public ConviteServiceImpl(TarefaRepository tarefaRepository, UsuarioRepository usuarioRepository, ConviteRepository conviteRepository) {
+    public ConviteServiceImpl(TarefaRepository tarefaRepository, UsuarioRepository usuarioRepository, ConviteRepository conviteRepository,TarefaMembroRepository tarefaMembroRepository) {
         this.tarefaRepository = tarefaRepository;
         this.usuarioRepository = usuarioRepository;
         this.conviteRepository = conviteRepository;
+        this.tarefaMembroRepository = tarefaMembroRepository;
     }
 
     @Override
@@ -98,5 +95,49 @@ public class ConviteServiceImpl implements ConviteService {
                     convite.getDataEnvio()
             );
         }).toList();
+    }
+
+    @Override
+    @Transactional
+    public void aceitarConvite(UUID conviteId, Usuario usuarioLogado) {
+        Convite convite = this.conviteRepository.findById(conviteId)
+                .orElseThrow(() -> new ConviteNaoEncontradoException("Convite não encontrado."));
+
+        if (!convite.getDestinatario().getId().equals(usuarioLogado.getId())) {
+            throw new AcessoNegadoException("Você não tem permissão para aceitar este convite.");
+        }
+
+        if (convite.getStatus() != StatusConvite.PENDENTE) {
+            throw new RegraDeNegocioException("Este convite não está mais pendente e não pode ser aceito.");
+        }
+
+        convite.setStatus(StatusConvite.ACEITO);
+
+        TarefaMembro novoMembro = new TarefaMembro();
+        novoMembro.setTarefa(convite.getTarefa());
+        novoMembro.setMembro(usuarioLogado);
+        novoMembro.setPermissao(convite.getPermissao());
+
+        this.conviteRepository.save(convite);
+        this.tarefaMembroRepository.save(novoMembro);
+    }
+
+    @Override
+    @Transactional
+    public void recusarConvite(UUID conviteId, Usuario usuarioLogado) {
+        Convite convite = this.conviteRepository.findById(conviteId)
+                .orElseThrow(() -> new ConviteNaoEncontradoException("Convite não encontrado."));
+
+        if (!convite.getDestinatario().getId().equals(usuarioLogado.getId())) {
+            throw new AcessoNegadoException("Você não tem permissão para recusar este convite.");
+        }
+
+        if (convite.getStatus() != StatusConvite.PENDENTE) {
+            throw new RegraDeNegocioException("Este convite não está mais pendente.");
+        }
+
+        convite.setStatus(StatusConvite.RECUSADO);
+
+        this.conviteRepository.save(convite);
     }
 }

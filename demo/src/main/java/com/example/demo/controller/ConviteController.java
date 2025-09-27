@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/convite")
+@RequestMapping("/convites")
 public class ConviteController {
 
     private final ConviteService conviteService;
@@ -43,5 +43,23 @@ public class ConviteController {
         List<ConviteResponseDTO> convites = this.conviteService.listarConvitesPendentes(usuarioLogado);
 
         return ResponseEntity.ok(convites);
+    }
+
+    @PostMapping("/{conviteId}/aceitar")
+    public ResponseEntity<Void>  aceitarConvite(@PathVariable UUID conviteId, Authentication authentication){
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+
+        this.conviteService.aceitarConvite(conviteId, usuarioLogado);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{conviteId}/recusar")
+    public ResponseEntity<Void>  recusarConvite(@PathVariable UUID conviteId, Authentication authentication){
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+
+        this.conviteService.recusarConvite(conviteId, usuarioLogado);
+
+        return ResponseEntity.noContent().build();
     }
 }

@@ -79,4 +79,18 @@ public class TarefaController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/iniciar")
+    public ResponseEntity<Void> iniciarTarefa(@PathVariable UUID id, Authentication authentication) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        this.tarefaService.iniciarTarefa(id, usuarioLogado);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/concluir")
+    public ResponseEntity<Void> concluirTarefa(@PathVariable UUID id, Authentication authentication) {
+        Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
+        this.tarefaService.concluirTarefa(id, usuarioLogado);
+        return ResponseEntity.noContent().build();
+    }
+
 }

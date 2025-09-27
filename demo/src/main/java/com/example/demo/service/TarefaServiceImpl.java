@@ -4,15 +4,14 @@ import com.example.demo.dto.*;
 import com.example.demo.exception.*;
 import com.example.demo.model.*;
 import com.example.demo.repository.CategoriaRepository;
-import com.example.demo.repository.TarefaMembroRepository;
 import com.example.demo.repository.TarefaRepository;
-import com.example.demo.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @Service
@@ -20,14 +19,10 @@ public class TarefaServiceImpl implements TarefaService {
 
     private final TarefaRepository tarefaRepository;
     private final CategoriaRepository categoriaRepository;
-    private final TarefaMembroRepository  tarefaMembroRepository;
-    private final UsuarioRepository usuarioRepository;
 
-    public TarefaServiceImpl(TarefaRepository tarefaRepository, CategoriaRepository categoriaRepository, TarefaMembroRepository tarefaMembroRepository, UsuarioRepository usuarioRepository) {
+    public TarefaServiceImpl(TarefaRepository tarefaRepository, CategoriaRepository categoriaRepository) {
         this.tarefaRepository = tarefaRepository;
         this.categoriaRepository = categoriaRepository;
-        this.tarefaMembroRepository = tarefaMembroRepository;
-        this.usuarioRepository = usuarioRepository;
     }
 
     @Override
@@ -54,12 +49,12 @@ public class TarefaServiceImpl implements TarefaService {
         Tarefa novaTarefa = new Tarefa();
         novaTarefa.setTitulo(tarefaDTO.titulo());
         novaTarefa.setDescricao(tarefaDTO.descricao());
-        novaTarefa.setStatus(tarefaDTO.status());
         novaTarefa.setPrioridade(tarefaDTO.prioridade());
         novaTarefa.setDataDeVencimento(tarefaDTO.dataDeVencimento());
         novaTarefa.setUsuario(usuario);
         novaTarefa.setCategoria(categoriaDaTarefa);
         novaTarefa.setTarefaPai(tarefaPai);
+        novaTarefa.setStatus(StatusTarefa.PENDENTE);
 
         if (tarefaPai != null) {
             tarefaPai.getSubTarefas().add(novaTarefa);
@@ -70,31 +65,45 @@ public class TarefaServiceImpl implements TarefaService {
     }
 
     @Override
+    @Transactional
     public TarefaResponseDTO atualizarTarefa(UUID id, TarefaRequestDTO tarefaDTO, Usuario usuario) {
         Tarefa tarefaExistente = this.tarefaRepository.findById(id).orElseThrow(() ->
                 new TarefaNaoEncontradaException("Tarefa não encontrada com o ID: " + id)
         );
 
-        if (!tarefaExistente.getUsuario().getId().equals(usuario.getId())) {
-            throw new AcessoNegadoException("Acesso negado: esta tarefa não pertence ao usuário.");
+        // verifica se é dono ou colaborador com permissão de edição
+        boolean ehDono = tarefaExistente.getUsuario().getId().equals(usuario.getId());
+        boolean podeEditar = tarefaExistente.getMembros().stream()
+                .anyMatch(membro ->
+                        membro.getMembro().getId().equals(usuario.getId()) &&
+                                membro.getPermissao() == Permissao.EDITAR
+                );
+
+        if (!ehDono && !podeEditar) {
+            throw new AcessoNegadoException("Acesso negado: você não tem permissão para editar esta tarefa.");
         }
 
-        Categoria categoriaDaTarefa = null;
+        // Atualiza apenas os campos que foram fornecidos no DTO
+        if (tarefaDTO.titulo() != null) {
+            tarefaExistente.setTitulo(tarefaDTO.titulo());
+        }
+        if (tarefaDTO.descricao() != null) {
+            tarefaExistente.setDescricao(tarefaDTO.descricao());
+        }
+        if (tarefaDTO.prioridade() != null) {
+            tarefaExistente.setPrioridade(tarefaDTO.prioridade());
+        }
+        if (tarefaDTO.dataDeVencimento() != null) {
+            tarefaExistente.setDataDeVencimento(tarefaDTO.dataDeVencimento());
+        }
         if (tarefaDTO.categoriaId() != null) {
-            categoriaDaTarefa = this.categoriaRepository.findById(tarefaDTO.categoriaId())
+            Categoria categoria = this.categoriaRepository.findById(tarefaDTO.categoriaId())
                     .orElseThrow(() -> new CategoriaNaoEncontradaException("Categoria informada não existe."));
-
-            if (!categoriaDaTarefa.getUsuario().getId().equals(usuario.getId())) {
+            if (!categoria.getUsuario().getId().equals(usuario.getId())) {
                 throw new AcessoNegadoException("Acesso negado: a categoria selecionada não pertence ao usuário.");
             }
+            tarefaExistente.setCategoria(categoria);
         }
-
-        tarefaExistente.setTitulo(tarefaDTO.titulo());
-        tarefaExistente.setDescricao(tarefaDTO.descricao());
-        tarefaExistente.setStatus(tarefaDTO.status());
-        tarefaExistente.setPrioridade(tarefaDTO.prioridade());
-        tarefaExistente.setDataDeVencimento(tarefaDTO.dataDeVencimento());
-        tarefaExistente.setCategoria(categoriaDaTarefa);
 
         Tarefa tarefaSalva = this.tarefaRepository.save(tarefaExistente);
 
@@ -104,18 +113,22 @@ public class TarefaServiceImpl implements TarefaService {
     @Override
     @Transactional(readOnly = true)
     public List<TarefaResponseDTO> listarTarefas(Usuario usuario, Prioridade prioridade, UUID categoriaId) {
-        List<Tarefa> tarefas;
+        List<Tarefa> todasAsTarefas = this.tarefaRepository.findTarefasByUsuarioOrMembro(usuario);
+
+        Stream<Tarefa> tarefasStream = todasAsTarefas.stream();
+
         if (categoriaId != null) {
-            Categoria categoria = this.categoriaRepository.findById(categoriaId)
-                    .orElseThrow(() -> new CategoriaNaoEncontradaException("Categoria informada não existe."));
-            tarefas = this.tarefaRepository.findByUsuarioAndCategoria(usuario, categoria);
-        } else if (prioridade != null) {
-            tarefas = this.tarefaRepository.findByUsuarioAndPrioridade(usuario, prioridade);
-        } else {
-            tarefas = this.tarefaRepository.findByUsuario(usuario);
+            tarefasStream = tarefasStream.filter(tarefa -> tarefa.getCategoria() != null && tarefa.getCategoria().getId().equals(categoriaId));
         }
 
-        List<Tarefa> tarefasPrincipais = tarefas.stream()
+        if (prioridade != null) {
+            tarefasStream = tarefasStream.filter(tarefa -> tarefa.getPrioridade() == prioridade);
+        }
+
+        List<Tarefa> tarefasFiltradas = tarefasStream.toList();
+
+
+        List<Tarefa> tarefasPrincipais = tarefasFiltradas.stream()
                 .filter(tarefa -> tarefa.getTarefaPai() == null)
                 .collect(Collectors.toCollection(ArrayList::new));
 
@@ -129,6 +142,7 @@ public class TarefaServiceImpl implements TarefaService {
     }
 
     @Override
+    @Transactional
     public void deletarTarefa(UUID id,Usuario usuario) {
         Tarefa tarefaEscolhida = this.tarefaRepository.findById(id).orElseThrow(() ->
                 new TarefaNaoEncontradaException("Tarefa nao encontrada com o ID:" + id)
@@ -159,7 +173,6 @@ public class TarefaServiceImpl implements TarefaService {
         Set<TarefaResponseDTO> subTarefasDTO = new HashSet<>();
         // A verificação explícita e a cópia para uma nova lista previnem o erro
         if (tarefa.getSubTarefas() != null && !tarefa.getSubTarefas().isEmpty()) {
-            // Criamos uma cópia da coleção ANTES de iterar sobre ela com o stream
             Set<Tarefa> copiaSubTarefas = new HashSet<>(tarefa.getSubTarefas());
             subTarefasDTO = copiaSubTarefas.stream()
                     .map(this::toTarefaResponseDTO)
@@ -179,15 +192,17 @@ public class TarefaServiceImpl implements TarefaService {
         );
     }
 
+    @Override
+    @Transactional(readOnly = true)
     public DashboardDTO gerarDashboard(Usuario usuario) {
         LocalDateTime agora = LocalDateTime.now();
 
-        long totalTarefas = this.tarefaRepository.countByUsuario(usuario);
-        long tarefasPendentes = this.tarefaRepository.countByUsuarioAndStatus(usuario, "PENDENTE");
-        long tarefasConcluidas = this.tarefaRepository.countByUsuarioAndStatus(usuario, "CONCLUIDA");
-        long tarefasAtrasadas = this.tarefaRepository.countTarefasAtrasadas(usuario, agora);
+        long totalTarefas = this.tarefaRepository.countTotalTarefasByUsuarioOrMembro(usuario);
+        long tarefasPendentes = this.tarefaRepository.countTarefasByStatusForUsuarioOrMembro(usuario, "PENDENTE");
+        long tarefasConcluidas = this.tarefaRepository.countTarefasByStatusForUsuarioOrMembro(usuario, "CONCLUIDA");
+        long tarefasAtrasadas = this.tarefaRepository.countTarefasAtrasadasForUsuarioOrMembro(usuario, agora);
 
-        Optional<Tarefa> proximaTarefaOpt = this.tarefaRepository.findProximaTarefaAVencer(usuario, agora);
+        Optional<Tarefa> proximaTarefaOpt = this.tarefaRepository.findProximaTarefaAVencerForUsuarioOrMembro(usuario, agora);
 
         DashboardDTO.TarefaResumidaDTO proximaTarefaDTO = proximaTarefaOpt
                 .map(tarefa -> new DashboardDTO.TarefaResumidaDTO(
@@ -204,5 +219,47 @@ public class TarefaServiceImpl implements TarefaService {
                 tarefasAtrasadas,
                 proximaTarefaDTO
         );
+    }
+
+    @Override
+    @Transactional
+    public void iniciarTarefa(UUID tarefaId, Usuario usuarioLogado) {
+        Tarefa tarefa = this.tarefaRepository.findById(tarefaId)
+                .orElseThrow(() -> new TarefaNaoEncontradaException("Tarefa não encontrada com o ID: " + tarefaId));
+
+        boolean ehDono = tarefa.getUsuario().getId().equals(usuarioLogado.getId());
+        boolean podeEditar = tarefa.getMembros().stream()
+                .anyMatch(membro ->
+                        membro.getMembro().getId().equals(usuarioLogado.getId()) &&
+                                membro.getPermissao() == Permissao.EDITAR
+                );
+
+        if (!ehDono && !podeEditar) {
+            throw new AcessoNegadoException("Acesso negado: você não tem permissão para modificar esta tarefa.");
+        }
+
+        tarefa.setStatus(StatusTarefa.EM_ANDAMENTO);
+        this.tarefaRepository.save(tarefa);
+    }
+
+    @Override
+    @Transactional
+    public void concluirTarefa(UUID tarefaId, Usuario usuarioLogado) {
+        Tarefa tarefa = this.tarefaRepository.findById(tarefaId)
+                .orElseThrow(() -> new TarefaNaoEncontradaException("Tarefa não encontrada com o ID: " + tarefaId));
+
+        boolean ehDono = tarefa.getUsuario().getId().equals(usuarioLogado.getId());
+        boolean podeEditar = tarefa.getMembros().stream()
+                .anyMatch(membro ->
+                        membro.getMembro().getId().equals(usuarioLogado.getId()) &&
+                                membro.getPermissao() == Permissao.EDITAR
+                );
+
+        if (!ehDono && !podeEditar) {
+            throw new AcessoNegadoException("Acesso negado: você não tem permissão para modificar esta tarefa.");
+        }
+
+        tarefa.setStatus(StatusTarefa.CONCLUIDA);
+        this.tarefaRepository.save(tarefa);
     }
 }
