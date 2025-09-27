@@ -4,6 +4,7 @@ import com.example.demo.dto.*;
 import com.example.demo.model.Prioridade;
 import com.example.demo.model.Usuario;
 import com.example.demo.service.AnexoService;
+import com.example.demo.service.ConviteService;
 import com.example.demo.service.TarefaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -76,18 +77,6 @@ public class TarefaController {
         Usuario usuarioLogado = (Usuario) authentication.getPrincipal();
         tarefaService.deletarTarefa(id,usuarioLogado);
         return ResponseEntity.noContent().build();
-    }
-
-    @PostMapping("/{tarefaId}/membros")
-    @Transactional
-    public ResponseEntity<Void> convidarMembro(
-            @PathVariable UUID tarefaId,
-            @RequestBody @Valid ConvidarMembroRequestDTO conviteDTO,
-            Authentication authentication
-    ) {
-        Usuario donoDaTarefa = (Usuario) authentication.getPrincipal();
-        this.tarefaService.convidarMembro(tarefaId, conviteDTO, donoDaTarefa);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
 }

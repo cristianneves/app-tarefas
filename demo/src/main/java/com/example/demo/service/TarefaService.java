@@ -18,5 +18,5 @@ public interface TarefaService {
 
     DashboardDTO gerarDashboard(Usuario usuarioLogado);
 
-    void convidarMembro(UUID tarefaId, ConvidarMembroRequestDTO conviteDTO, Usuario donoDaTarefa);
+
 }

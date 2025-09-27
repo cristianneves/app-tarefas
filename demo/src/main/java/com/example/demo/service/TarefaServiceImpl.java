@@ -205,42 +205,4 @@ public class TarefaServiceImpl implements TarefaService {
                 proximaTarefaDTO
         );
     }
-
-    @Override
-    @Transactional
-    public void convidarMembro(UUID tarefaId, ConvidarMembroRequestDTO conviteDTO, Usuario donoDaTarefa) {
-        // 1. Busca a tarefa que receberá o convite.
-        Tarefa tarefa = this.tarefaRepository.findById(tarefaId)
-                .orElseThrow(() -> new TarefaNaoEncontradaException("Tarefa não encontrada."));
-
-        // 2. Validação de Segurança: O usuário que está convidando é realmente o dono da tarefa?
-        if (!tarefa.getUsuario().getId().equals(donoDaTarefa.getId())) {
-            throw new AcessoNegadoException("Apenas o dono da tarefa pode convidar membros.");
-        }
-
-        // 3. Busca o usuário que está sendo convidado pelo e-mail.
-        Usuario membroConvidado = this.usuarioRepository.findByEmail(conviteDTO.email())
-                .orElseThrow(() -> new UsuarioNaoEncontradoException("Usuário com o e-mail fornecido não foi encontrado.")); // Crie esta exceção
-
-        // 4. Regra de Negócio: O dono não pode convidar a si mesmo.
-        if (donoDaTarefa.getId().equals(membroConvidado.getId())) {
-            throw new RegraDeNegocioException("Você não pode convidar a si mesmo para uma de suas tarefas."); // Crie esta exceção
-        }
-
-        // 5. Regra de Negócio: O usuário convidado já não é um membro?
-        boolean jaEhMembro = tarefa.getMembros().stream()
-                .anyMatch(membro -> membro.getMembro().getId().equals(membroConvidado.getId()));
-        if (jaEhMembro) {
-            throw new RegraDeNegocioException("Este usuário já é um membro desta tarefa.");
-        }
-
-        // 6. Se todas as validações passaram, cria a nova entidade de associação.
-        TarefaMembro novoMembro = new TarefaMembro();
-        novoMembro.setTarefa(tarefa);
-        novoMembro.setMembro(membroConvidado);
-        novoMembro.setPermissao(conviteDTO.permissao());
-
-        // 7. Salva a nova associação no banco de dados.
-        this.tarefaMembroRepository.save(novoMembro);
-    }
 }
