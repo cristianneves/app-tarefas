@@ -1,2 +1,2 @@
 # app-tarefas
-API java de um gerenciador de tarefas pessoal
+API java de um gerenciador de tarefas pessoal e colaborativo, read.me em desenvolvimento...
