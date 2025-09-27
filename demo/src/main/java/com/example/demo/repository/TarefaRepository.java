@@ -33,4 +33,7 @@ public interface TarefaRepository extends JpaRepository<Tarefa, UUID> {
     // Busca a próxima tarefa a vencer que ainda não foi concluída
     @Query("SELECT t FROM Tarefa t WHERE t.usuario = :usuario AND t.dataDeVencimento > :agora AND t.status <> 'CONCLUIDA' ORDER BY t.dataDeVencimento ASC LIMIT 1")
     Optional<Tarefa> findProximaTarefaAVencer(@Param("usuario") Usuario usuario, @Param("agora") LocalDateTime agora);
+
+    @Query("SELECT t FROM Tarefa t LEFT JOIN t.membros m WHERE t.usuario = :usuario OR m.membro = :usuario")
+    List<Tarefa> findTarefasByUsuarioOrMembro(@Param("usuario") Usuario usuario);
 }

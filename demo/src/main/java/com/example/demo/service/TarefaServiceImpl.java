@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @Service
@@ -104,18 +105,22 @@ public class TarefaServiceImpl implements TarefaService {
     @Override
     @Transactional(readOnly = true)
     public List<TarefaResponseDTO> listarTarefas(Usuario usuario, Prioridade prioridade, UUID categoriaId) {
-        List<Tarefa> tarefas;
+        List<Tarefa> todasAsTarefas = this.tarefaRepository.findTarefasByUsuarioOrMembro(usuario);
+
+        Stream<Tarefa> tarefasStream = todasAsTarefas.stream();
+
         if (categoriaId != null) {
-            Categoria categoria = this.categoriaRepository.findById(categoriaId)
-                    .orElseThrow(() -> new CategoriaNaoEncontradaException("Categoria informada não existe."));
-            tarefas = this.tarefaRepository.findByUsuarioAndCategoria(usuario, categoria);
-        } else if (prioridade != null) {
-            tarefas = this.tarefaRepository.findByUsuarioAndPrioridade(usuario, prioridade);
-        } else {
-            tarefas = this.tarefaRepository.findByUsuario(usuario);
+            tarefasStream = tarefasStream.filter(tarefa -> tarefa.getCategoria() != null && tarefa.getCategoria().getId().equals(categoriaId));
         }
 
-        List<Tarefa> tarefasPrincipais = tarefas.stream()
+        if (prioridade != null) {
+            tarefasStream = tarefasStream.filter(tarefa -> tarefa.getPrioridade() == prioridade);
+        }
+
+        List<Tarefa> tarefasFiltradas = tarefasStream.toList();
+
+
+        List<Tarefa> tarefasPrincipais = tarefasFiltradas.stream()
                 .filter(tarefa -> tarefa.getTarefaPai() == null)
                 .collect(Collectors.toCollection(ArrayList::new));
 
