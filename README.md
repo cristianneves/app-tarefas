@@ -52,15 +52,15 @@ cp .env.example .env
 
 Agora, edite o arquivo .env com suas configurações locais:
 
-# Configuração do Banco de Dados
+#### Configuração do Banco de Dados
 DB_URL=jdbc:postgresql://localhost:5432/seu_banco
 DB_USER=seu_user
 DB_PASS=sua_senha
 
-# Segredo para a assinatura do JWT (use um gerador de string aleatória forte)
+#### Segredo para a assinatura do JWT (use um gerador de string aleatória forte)
 JWT_SECRET=sua-chave-secreta-de-minimo-32-caracteres-aqui
 
-# Diretório para upload de arquivos
+#### Diretório para upload de arquivos
 UPLOAD_DIR=./uploads
 O arquivo application.properties já está configurado para ler estas variáveis.
 
