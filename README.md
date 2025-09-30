@@ -92,12 +92,12 @@ A API estará disponível em http://localhost:8080.
 
 ### Endpoints:
 
-Autenticação       /auth/{login,registrar}	  Gerencia o registro e login de usuários.
+Autenticação ---       /auth/{login,registrar} ---	  Gerencia o registro e login de usuários.
 
-Tarefas	           /tarefas              	CRUD de tarefas, subtarefas e gestão de status.
+Tarefas	---            /tarefas ---               	CRUD de tarefas, subtarefas e gestão de status.
 
-Categorias	       /categoria	            CRUD de categorias para organização de tarefas.
+Categorias --- 	       /categoria --- 	            CRUD de categorias para organização de tarefas.
 
-Convites	         /convites	            Gestão de convites de colaboração em tarefas.
+Convites --- 	         /convites --- Gestão de convites de colaboração em tarefas.
 
-Anexos	           /anexos	              Download de arquivos anexados.
+Anexos --- 	           /anexos --- 	              Download de arquivos anexados.
